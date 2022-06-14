@@ -241,7 +241,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 reservesOut;
         uint256 amountTokensOut;
 
-        // swap [SWZ --> Token]
+        // swap [SWZ --> TokenOut]
         if (_tokenIn == swzToken) {
             (reservesOut, reservesIn) = _getPoolBalancesBefore(_tokenOut);
 
@@ -269,7 +269,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             return;
         }
 
-        // swap [Token --> SWZ]
+        // swap [TokenIn --> SWZ]
         uint256 amountSwzTokensOut;
         if (_tokenOut == swzToken) {
             (reservesIn, reservesOut) = _getPoolBalancesBefore(_tokenIn);
@@ -496,7 +496,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 reservesOut;
         uint256 reservesIn;
 
-        // swap [SWZ --> Token]
+        // swap [SWZ --> TokenOut]
         if (_tokenIn == swzToken) {
             (reservesOut, reservesIn) = _getPoolBalancesBefore(_tokenOut);
 
@@ -507,7 +507,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             );
         }
 
-        // swap [Token --> SWZ]
+        // swap [TokenIn --> SWZ]
         if (_tokenOut == swzToken) {
             (reservesIn, reservesOut) = _getPoolBalancesBefore(_tokenIn);
 
@@ -519,7 +519,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         }
 
         // _tokenIn != swzToken && _tokenOut != swzToken
-        // swap [Token1 --> SWZ --> Token2], Token1 != Token2
+        // swap [TokenIn --> SWZ --> TokenOut], TokenIn != TokenOut
         (reservesIn, reservesOut) = _getPoolBalancesBefore(_tokenIn);
         
         // calculating amount of swz tokens out from tokenIn pool
