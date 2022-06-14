@@ -3,7 +3,7 @@ pragma solidity ^0.8.14;
 
 import "./openzeppelin-contracts-4.6.0/contracts/token/ERC1155/extensions/ERC1155Supply.sol";
 
-abstract contract szERC1155 is ERC1155Supply {
+abstract contract swzERC1155 is ERC1155Supply {
 
     string contractName = "SwapZero";
     string contractSymbol = "SWZ_LP";

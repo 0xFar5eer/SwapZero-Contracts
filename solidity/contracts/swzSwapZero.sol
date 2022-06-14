@@ -5,7 +5,7 @@ import "./swzERC1155.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/token/ERC20/IERC20.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/security/ReentrancyGuard.sol";
 
-contract SwapZero is szERC1155, ReentrancyGuard {
+contract SwapZero is swzERC1155, ReentrancyGuard {
 
     address constant DEAD_ADDRESS = address(0xDEAD);
     uint256 constant MINIMUM_LIQUIDITY = 1000;
@@ -23,6 +23,42 @@ contract SwapZero is szERC1155, ReentrancyGuard {
         IERC20 tokenInPool;
         uint256 swzTokenBalance;
     }
+
+    event PoolCreated(
+        IERC20 indexed _token,
+        uint256 _poolId
+    );
+
+    event LiquidityAdded(
+        IERC20 indexed _token,
+        uint256 _amountTokensIn,
+        uint256 _amountSwzTokensIn,
+        uint256 _lpTokensAmount,
+        address _transferTo
+    );
+
+    event LiquidityRemoved(
+        IERC20 indexed _token,
+        uint256 _amountTokensOut,
+        uint256 _amountSwzTokensOut,
+        uint256 _lpTokensAmount,
+        address _transferTo
+    );
+
+    event Swap(
+        IERC20 indexed _token,
+        uint256 _amountTokensIn,
+        uint256 _amountSwzTokensIn,
+        uint256 _amountTokensOut,
+        uint256 _amountSwzTokensOut,
+        address _transferTo
+    );
+
+    event Sync(
+        IERC20 indexed _token,
+        uint256 _newBalanceToken,
+        uint256 _newBalanceSwz
+    );
 
     constructor() {
         // filling 0th element of pool as empty
@@ -50,15 +86,19 @@ contract SwapZero is szERC1155, ReentrancyGuard {
             tokenInPool: _tokenAddr,
             swzTokenBalance: 0
         }));
-
+    
+        emit PoolCreated(
+            _tokenAddr,
+            poolId
+        );
         return poolId;
     }
 
     function addLiquidity(
         IERC20 _tokenAddr,
-        uint256 _tokenAmount,
-        uint256 _swzAmount,
-        address transferTo
+        uint256 _amountTokensIn,
+        uint256 _amountSwzTokensIn,
+        address _transferTo
     )
         public
         payable
@@ -76,7 +116,7 @@ contract SwapZero is szERC1155, ReentrancyGuard {
         uint256 poolTokenBalanceBefore = _getTokenBalanceInPoolBefore(_tokenAddr);
 
         // updating pool balance in storage
-        pool.swzTokenBalance += _swzAmount;
+        pool.swzTokenBalance += _amountSwzTokensIn;
 
         uint256 totalSupplyOfLiquidity = totalSupply(poolId);        
         uint256 amountOfLiquidityToMint = 0;
@@ -93,32 +133,44 @@ contract SwapZero is szERC1155, ReentrancyGuard {
             );
 
             // refer to 3.4 Initialization of liquidity token supply https://uniswap.org/whitepaper.pdf
-            amountOfLiquidityToMint = _sqrt(_tokenAmount * _swzAmount) - MINIMUM_LIQUIDITY;
+            amountOfLiquidityToMint = _sqrt(_amountTokensIn * _amountSwzTokensIn) - MINIMUM_LIQUIDITY;
         } else {
             // it is Math.min(x1, x2)
             amountOfLiquidityToMint = _min(
-                _tokenAmount * totalSupplyOfLiquidity / poolTokenBalanceBefore,
-                _swzAmount * totalSupplyOfLiquidity / pool.swzTokenBalance
+                _amountTokensIn * totalSupplyOfLiquidity / poolTokenBalanceBefore,
+                _amountSwzTokensIn * totalSupplyOfLiquidity / pool.swzTokenBalance
             );
         }
 
         require(amountOfLiquidityToMint > 0, "Insufficient amount of liquidity minted");
 
         // transferring token from msg sender to contract
-        _safeTokenTransferFromMsgSender(_tokenAddr, _tokenAmount);
+        _safeTokenTransferFromMsgSender(_tokenAddr, _amountTokensIn);
 
         // SWZ token does not require additional checks
-        swzToken.transferFrom(msg.sender, address(this), _swzAmount);
+        swzToken.transferFrom(msg.sender, address(this), _amountSwzTokensIn);
 
         // minting ERC1155 token for user
         _mint(
-            transferTo,
+            _transferTo,
             poolId,
             amountOfLiquidityToMint,
             ""
         );
+        
+        emit LiquidityAdded(
+            _tokenAddr,
+            _amountTokensIn,
+            _amountSwzTokensIn,
+            amountOfLiquidityToMint,
+            _transferTo
+        );
 
-        // TODO: events
+        emit Sync(
+            _tokenAddr,
+            poolTokenBalanceBefore + _amountTokensIn,
+            pool.swzTokenBalance
+        );
     }
 
     function removeLiquidity(
@@ -156,8 +208,20 @@ contract SwapZero is szERC1155, ReentrancyGuard {
 
         // transferring SWZ tokens to user
         swzToken.transfer(_transferTo, amountSwzTokensOut);
+        
+        emit LiquidityAdded(
+            _tokenAddr,
+            amountTokensOut,
+            amountSwzTokensOut,
+            _amountOfLiquidityToRemove,
+            _transferTo
+        );
 
-        // TODO: events
+        emit Sync(
+            _tokenAddr,
+            poolTokenBalanceBefore - amountTokensOut,
+            pool.swzTokenBalance
+        );
     }
 
     // TODO: swapTokensForExactTokens
@@ -190,11 +254,11 @@ contract SwapZero is szERC1155, ReentrancyGuard {
             _swap(
                 _tokenOut,              // _tokenAddr
                 reservesOut,            // _tokenBalanceBefore
-                reservesIn,             // _swzTokenBalanceBefore
                 0,                      // _amountTokensIn
                 _amountTokensIn,        // _amountSwzIn
                 amountTokensOut,        // _amountTokensOut
-                0                       // _amountSwzOut
+                0,                      // _amountSwzOut
+                _transferTo             // _transferTo
             );
 
             // transferring SWZ tokens from user to contract
@@ -202,8 +266,6 @@ contract SwapZero is szERC1155, ReentrancyGuard {
 
             // transferring tokens to user
             _safeTokenTransferToUser(_tokenOut, _transferTo, amountTokensOut);
-
-            // TODO: events
             return;
         }
 
@@ -221,11 +283,11 @@ contract SwapZero is szERC1155, ReentrancyGuard {
             _swap(
                 _tokenIn,               // _tokenAddr
                 reservesIn,             // _tokenBalanceBefore
-                reservesOut,            // _swzTokenBalanceBefore
                 _amountTokensIn,        // _amountTokensIn
                 0,                      // _amountSwzIn
                 0,                      // _amountTokensOut
-                amountSwzTokensOut      // _amountSwzOut
+                amountSwzTokensOut,     // _amountSwzOut
+                _transferTo             // _transferTo
             );
 
             // transferring tokens from user to contract
@@ -233,8 +295,6 @@ contract SwapZero is szERC1155, ReentrancyGuard {
 
             // transferring SWZ tokens to user
             swzToken.transfer(_transferTo, amountSwzTokensOut);
-
-            // TODO: events
             return;
         }
 
@@ -254,11 +314,11 @@ contract SwapZero is szERC1155, ReentrancyGuard {
         _swap(
             _tokenIn,               // _tokenAddr
             reservesIn,             // _tokenBalanceBefore
-            reservesOut,            // _swzTokenBalanceBefore
             _amountTokensIn,        // _amountTokensIn
             0,                      // _amountSwzIn
             0,                      // _amountTokensOut
-            amountSwzTokensOut      // _amountSwzOut
+            amountSwzTokensOut,     // _amountSwzOut
+            _transferTo             // _transferTo
         );
 
         (reservesOut, reservesIn) = _getPoolBalancesBefore(_tokenOut);
@@ -273,11 +333,11 @@ contract SwapZero is szERC1155, ReentrancyGuard {
         _swap(
             _tokenOut,              // _tokenAddr
             reservesOut,            // _tokenBalanceBefore
-            reservesIn,             // _swzTokenBalanceBefore
             0,                      // _amountTokensIn
             amountSwzTokensOut,     // _amountSwzIn
             amountTokensOut,        // _amountTokensOut
-            0                       // _amountSwzOut
+            0,                      // _amountSwzOut
+            _transferTo             // _transferTo
         );
 
         // transferring tokens from user to contract
@@ -285,8 +345,6 @@ contract SwapZero is szERC1155, ReentrancyGuard {
 
         // transferring tokens to user
         _safeTokenTransferToUser(_tokenOut, _transferTo, amountTokensOut);
-
-        // TODO: events
     }
 
     // core swap function
@@ -294,20 +352,23 @@ contract SwapZero is szERC1155, ReentrancyGuard {
     function _swap(
         IERC20 _tokenAddr,
         uint256 _tokenBalanceBefore,
-        uint256 _swzTokenBalanceBefore,
         uint256 _amountTokensIn,
         uint256 _amountSwzIn,
         uint256 _amountTokensOut,
-        uint256 _amountSwzOut
+        uint256 _amountSwzOut,
+        address _transferTo
     )
         private
     {
+        uint256 poolId = tokenAddressToPoolId[_tokenAddr];
+        Pool storage pool = listOfPools[poolId];
+
         // calculating K value before the swap
-        uint256 kValueBefore = _tokenBalanceBefore * _swzTokenBalanceBefore;
+        uint256 kValueBefore = _tokenBalanceBefore * pool.swzTokenBalance;
 
         // calculating token balances after the swap
         uint256 tokenBalanceAfter = _tokenBalanceBefore + _amountTokensIn - _amountTokensOut;
-        uint256 swzTokenBalanceAfter = _swzTokenBalanceBefore + _amountSwzIn - _amountSwzOut;
+        uint256 swzTokenBalanceAfter = pool.swzTokenBalance + _amountSwzIn - _amountSwzOut;
 
         // calculating new K value after the swap including trade fees
         // refer to 3.2.1 Adjustment for fee https://uniswap.org/whitepaper.pdf
@@ -318,9 +379,22 @@ contract SwapZero is szERC1155, ReentrancyGuard {
         require(kValueAfter >= kValueBefore, "K value must increase or remain unchanged during any swap");
 
         // update pool values
-        uint256 poolId = tokenAddressToPoolId[_tokenAddr];
-        Pool storage pool = listOfPools[poolId];
-        pool.swzTokenBalance = pool.swzTokenBalance + _amountSwzIn - _amountSwzOut;
+        pool.swzTokenBalance = swzTokenBalanceAfter;
+
+        emit Swap(
+            _tokenAddr,
+            _amountTokensIn,
+            _amountSwzIn,
+            _amountTokensOut,
+            _amountSwzOut,
+            _transferTo
+        );
+
+        emit Sync(
+            _tokenAddr,
+            tokenBalanceAfter,
+            swzTokenBalanceAfter
+        );
     }
 
     function _safeTokenTransferFromMsgSender(
