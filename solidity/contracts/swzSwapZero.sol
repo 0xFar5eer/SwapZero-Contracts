@@ -8,7 +8,9 @@ import "./openzeppelin-contracts-4.6.0/contracts/security/ReentrancyGuard.sol";
 contract SwapZero is swzERC1155, ReentrancyGuard {
 
     address constant DEAD_ADDRESS = address(0xDEAD);
-    uint256 constant MINIMUM_LIQUIDITY = 1000;
+    uint256 constant MINIMUM_LIQUIDITY = 1_000;
+
+    IERC20 constant NATIVE_TOKEN = IERC20(address(0)); // we use null address for native tokens
 
     IERC20 swzToken;
     Pool[] listOfPools;
@@ -50,8 +52,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _amountTokensIn,
         uint256 _amountSwzTokensIn,
         uint256 _amountTokensOut,
-        uint256 _amountSwzTokensOut,
-        address _transferTo
+        uint256 _amountSwzTokensOut
     );
 
     event Sync(
@@ -63,7 +64,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     constructor() {
         // filling 0th element of pool as empty
         listOfPools.push(Pool({
-            tokenInPool: IERC20(address(0)),
+            tokenInPool: IERC20(NATIVE_TOKEN),
             swzTokenBalance: 0
         }));
     }
@@ -137,8 +138,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         } else {
             // it is Math.min(x1, x2)
             amountOfLiquidityToMint = _min(
-                _amountTokensIn * totalSupplyOfLiquidity / poolTokenBalanceBefore,
-                _amountSwzTokensIn * totalSupplyOfLiquidity / pool.swzTokenBalance
+                (_amountTokensIn * totalSupplyOfLiquidity) / poolTokenBalanceBefore,
+                (_amountSwzTokensIn * totalSupplyOfLiquidity) / pool.swzTokenBalance
             );
         }
 
@@ -190,8 +191,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 poolTokenBalanceBefore = _getTokenBalanceInPoolBefore(_tokenAddr);
         
         uint256 totalSupplyOfLiquidity = totalSupply(poolId);
-        uint256 amountTokensOut = poolTokenBalanceBefore * _amountOfLiquidityToRemove / totalSupplyOfLiquidity;
-        uint256 amountSwzTokensOut = pool.swzTokenBalance * _amountOfLiquidityToRemove / totalSupplyOfLiquidity;
+        uint256 amountTokensOut = (poolTokenBalanceBefore * _amountOfLiquidityToRemove) / totalSupplyOfLiquidity;
+        uint256 amountSwzTokensOut = (pool.swzTokenBalance * _amountOfLiquidityToRemove) / totalSupplyOfLiquidity;
 
         // updating pool balance in storage
         pool.swzTokenBalance -= amountSwzTokensOut;
@@ -255,10 +256,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 _tokenOut,              // _tokenAddr
                 reservesOut,            // _tokenBalanceBefore
                 0,                      // _amountTokensIn
-                _amountTokensIn,        // _amountSwzIn
+                _amountTokensIn,        // _amountSwzTokensIn
                 amountTokensOut,        // _amountTokensOut
-                0,                      // _amountSwzOut
-                _transferTo             // _transferTo
+                0                       // _amountSwzTokensOut
             );
 
             // transferring SWZ tokens from user to contract
@@ -284,10 +284,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 _tokenIn,               // _tokenAddr
                 reservesIn,             // _tokenBalanceBefore
                 _amountTokensIn,        // _amountTokensIn
-                0,                      // _amountSwzIn
+                0,                      // _amountSwzTokensIn
                 0,                      // _amountTokensOut
-                amountSwzTokensOut,     // _amountSwzOut
-                _transferTo             // _transferTo
+                amountSwzTokensOut      // _amountSwzTokensOut
             );
 
             // transferring tokens from user to contract
@@ -315,10 +314,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             _tokenIn,               // _tokenAddr
             reservesIn,             // _tokenBalanceBefore
             _amountTokensIn,        // _amountTokensIn
-            0,                      // _amountSwzIn
+            0,                      // _amountSwzTokensIn
             0,                      // _amountTokensOut
-            amountSwzTokensOut,     // _amountSwzOut
-            _transferTo             // _transferTo
+            amountSwzTokensOut     // _amountSwzTokensOut
         );
 
         (reservesOut, reservesIn) = _getPoolBalancesBefore(_tokenOut);
@@ -334,10 +332,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             _tokenOut,              // _tokenAddr
             reservesOut,            // _tokenBalanceBefore
             0,                      // _amountTokensIn
-            amountSwzTokensOut,     // _amountSwzIn
+            amountSwzTokensOut,     // _amountSwzTokensIn
             amountTokensOut,        // _amountTokensOut
-            0,                      // _amountSwzOut
-            _transferTo             // _transferTo
+            0                       // _amountSwzTokensOut
         );
 
         // transferring tokens from user to contract
@@ -353,10 +350,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         IERC20 _tokenAddr,
         uint256 _tokenBalanceBefore,
         uint256 _amountTokensIn,
-        uint256 _amountSwzIn,
+        uint256 _amountSwzTokensIn,
         uint256 _amountTokensOut,
-        uint256 _amountSwzOut,
-        address _transferTo
+        uint256 _amountSwzTokensOut
     )
         private
     {
@@ -368,13 +364,13 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
 
         // calculating token balances after the swap
         uint256 tokenBalanceAfter = _tokenBalanceBefore + _amountTokensIn - _amountTokensOut;
-        uint256 swzTokenBalanceAfter = pool.swzTokenBalance + _amountSwzIn - _amountSwzOut;
+        uint256 swzTokenBalanceAfter = pool.swzTokenBalance + _amountSwzTokensIn - _amountSwzTokensOut;
 
         // calculating new K value after the swap including trade fees
         // refer to 3.2.1 Adjustment for fee https://uniswap.org/whitepaper.pdf
         uint256 kValueAfter = 
-            (tokenBalanceAfter - _amountTokensIn * TRADE_FEE_NOMINATOR / TRADE_FEE_DENOMINATOR) *
-            (swzTokenBalanceAfter - _amountSwzIn * TRADE_FEE_NOMINATOR / TRADE_FEE_DENOMINATOR);
+            (tokenBalanceAfter - (_amountTokensIn * TRADE_FEE_NOMINATOR) / TRADE_FEE_DENOMINATOR) *
+            (swzTokenBalanceAfter - (_amountSwzTokensIn * TRADE_FEE_NOMINATOR) / TRADE_FEE_DENOMINATOR);
         
         require(kValueAfter >= kValueBefore, "K value must increase or remain unchanged during any swap");
 
@@ -384,10 +380,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         emit Swap(
             _tokenAddr,
             _amountTokensIn,
-            _amountSwzIn,
+            _amountSwzTokensIn,
             _amountTokensOut,
-            _amountSwzOut,
-            _transferTo
+            _amountSwzTokensOut
         );
 
         emit Sync(
@@ -403,13 +398,13 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         private
     {
-        // we use address(0) for native tokens
+        // we use NATIVE_TOKEN for native tokens
         // if address != null that means this is ERC20 token
         // if address == null that means this is native token (for example ETH)
         // for non-native tokens we have to get
         // exact amount of contract balance increase
         // after calling ERC20.transferFrom function
-        if (address(_tokenAddr) != address(0)) {
+        if (_tokenAddr != NATIVE_TOKEN) {
             // non native tokens requires checking for fee-on-transfer
             uint256 tokenBalanceBefore = _tokenAddr.balanceOf(address(this));            
             _tokenAddr.transferFrom(msg.sender, address(this), _tokenAmount);
@@ -437,10 +432,10 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         private
     {
-        // we use address(0) for native tokens
+        // we use NATIVE_TOKEN for native tokens
         // if address != null that means this is ERC20 token
         // if address == null that means this is native token (for example ETH)
-        if (address(_tokenAddr) != address(0)) {           
+        if (_tokenAddr != NATIVE_TOKEN) {           
             _tokenAddr.transfer(_transferTo, _tokenAmount);
             return;
         }        
@@ -457,7 +452,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         require(tokenAddressToPoolId[_tokenAddr] > 0, "Pool with this token must exist");
 
         uint256 tokenBalanceBefore = 0;
-        if (address(_tokenAddr) == address(0)) {
+        if (_tokenAddr == NATIVE_TOKEN) {
             // user already transferred native tokens to the contract
             // to know balance before the transfer we have to substract it
             tokenBalanceBefore = address(this).balance - msg.value;
