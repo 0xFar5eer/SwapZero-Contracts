@@ -1,0 +1,59 @@
+{
+	"name": "Azero Swap Contracts",
+	"description": "",
+	"version": "1.0.0",
+	"scripts": {
+		"chain": "ganache-cli --gasLimit 30000000 --defaultBalanceEther 10000000 -i 5777 -p 8545  --account \"0xf7afd68a815edf7b87a772ef96dc942ca816cf26978954c52c96398cf4c15e4c,1000000000000000000000\" --account \"0xc7c9d41a50ac661df0f0e5eb8b788135a6ded1581d088b42898487296cf3fefb,1000000000000000000000\" --account \"0xc5f00377838871afc68e910afb151a1ce351bcb971655c9f84779e6a0504abbd,1000000000000000000000\"",
+		"deploy-token": "node deploy-token.js",
+		"compile": "truffle compile",
+		"test": "npx truffle test test/swaps.test.js",
+		"coverage": "npx truffle run coverage --network development"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/0xFar5eer"
+	},
+	"keywords": [
+		"solidity",
+		"ethereum",
+		"smart",
+		"contracts",
+		"security"
+	],
+	"author": "0xFar5eer",
+	"bugs": {
+		"url": "https://github.com/0xFar5eer"
+	},
+	"homepage": "https://github.com/0xFar5eer",
+	"devDependencies": {
+		"chai": "^4.2.0",
+		"eslint": "^6.5.1",
+		"eslint-config-standard": "^14.1.1",
+		"eslint-plugin-import": "^2.20.0",
+		"eslint-plugin-mocha-no-only": "^1.1.0",
+		"eslint-plugin-node": "^10.0.0",
+		"eslint-plugin-promise": "^4.2.1",
+		"eslint-plugin-standard": "^4.0.1",
+		"eth-sig-util": "^3.0.0",
+		"ethereumjs-util": "^7.0.7",
+		"ethereumjs-wallet": "^1.0.1",
+		"ganache-time-traveler": "^1.0.16",
+		"graphlib": "^2.1.8",
+		"hardhat-gas-reporter": "^1.0.4",
+		"keccak256": "^1.0.2",
+		"lodash.startcase": "^4.4.0",
+		"lodash.zip": "4.2.0",
+		"merkletreejs": "^0.2.13",
+		"micromatch": "^4.0.2",
+		"prettier": "^2.3.0",
+		"prettier-plugin-solidity": "^1.0.0-beta.16",
+		"rimraf": "^3.0.2",
+		"solhint": "^3.3.6",
+		"solidity-ast": "^0.4.25",
+		"solidity-coverage": "0.8.0-rc.1",
+		"solidity-docgen": "^0.5.3",
+		"truffle": "*",
+		"web3": "^1.3.0",
+		"yargs": "^16.2.0"
+	}
+}
