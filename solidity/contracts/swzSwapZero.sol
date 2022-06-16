@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 pragma solidity ^0.8.15;
 
+import "./TestErc20Token.sol"; // TODO: used for tests only, can be removed for production
+
 import "./swzERC1155.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/token/ERC20/IERC20.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/security/ReentrancyGuard.sol";
-
-import "./TestErc20Token.sol";
 
 contract SwapZero is swzERC1155, ReentrancyGuard {
 
