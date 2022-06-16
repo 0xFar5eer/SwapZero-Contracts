@@ -65,141 +65,6 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     );
 
 
-    /* Tests Block Starting (can be removed) */
-    ITestErc20Token testTokenIn;
-    ITestErc20Token testTokenOut;
-    function test1_CreateTokensAndPools()
-        public
-    {
-        testTokenIn = ITestErc20Token(address(new TestErc20Token("TokenIn", "T_IN")));
-        testTokenOut = ITestErc20Token(address(new TestErc20Token("TokenOut", "T_OUT")));
-        swzToken = ITestErc20Token(address(new TestErc20Token("SWZ", "SWZ")));
-
-        testTokenIn.mint(msg.sender, 1e12 * 1e18);
-        testTokenOut.mint(msg.sender, 1e12 * 1e18);
-        ITestErc20Token(address(swzToken)).mint(msg.sender, 1e12 * 1e18);
-
-        createPool(testTokenIn);
-        createPool(testTokenOut);
-        createPool(NATIVE_TOKEN);
-
-        addLiquidity(
-            testTokenIn,
-            1e6 * 1e18,
-            1e9 * 1e18,
-            msg.sender
-        );
-        addLiquidity(
-            testTokenOut,
-            1e9 * 1e18,
-            1e9 * 1e18,
-            msg.sender
-        );
-    }
-    function test2_CreateNativeTokenAndPool()
-        public
-        payable
-    {
-        addLiquidity(
-            NATIVE_TOKEN,
-            1 * 1e18,
-            1e9,
-            msg.sender
-        );
-    }
-    function test3_AddLiquidity_RemoveLiqudity()
-        public
-    {
-        (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
-
-        uint256 initialAmountOfTokenIn = 1e3 * 1e18;
-        uint256 initialAmountOfSwzToken = (initialAmountOfTokenIn * reservesSwzTokenOut) / reservesTokenIn;
-
-        uint256 amountOfLiquidity = addLiquidity(
-            testTokenIn,
-            initialAmountOfTokenIn,
-            initialAmountOfSwzToken,
-            msg.sender
-        );
-
-        (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
-            testTokenIn,
-            amountOfLiquidity,
-            msg.sender
-        );
-
-        require(amountOfTokensOut < initialAmountOfTokenIn, "amountOfTokensOut <= initialAmountOfTokenIn");
-        require(amountOfSwzTokensOut < initialAmountOfSwzToken, "amountOfSwzTokensOut <= initialAmountOfSwzToken");
-    }
-    function test4_AddLiquidity_SwapAndBack_RemoveLiqudity()
-        public
-    {
-        (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
-
-        uint256 initialAmountOfTokens = 1e3 * 1e18;
-
-        uint256 addLiquidityTokens = initialAmountOfTokens * 2 / 3;
-        uint256 addLiquiditySwz = (addLiquidityTokens * reservesSwzTokenOut) / reservesTokenIn;
-
-        uint256 amountOfLiquidity = addLiquidity(
-            testTokenIn,
-            addLiquidityTokens,
-            addLiquiditySwz,
-            msg.sender
-        );
-
-        uint256 swapTokensAmount = initialAmountOfTokens / 3;
-        uint256 receivedSwzTokens = swapExactTokensForTokens(
-            testTokenIn,
-            swzToken,
-            swapTokensAmount,
-            msg.sender
-        );
-        uint256 receivedTokens = swapExactTokensForTokens(
-            swzToken,
-            testTokenIn,
-            receivedSwzTokens,
-            msg.sender
-        );
-
-        require(receivedTokens < swapTokensAmount, "receivedTokens < swapTokensAmount");
-
-        (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
-            testTokenIn,
-            amountOfLiquidity,
-            msg.sender
-        );
-
-        require(receivedTokens + amountOfTokensOut < initialAmountOfTokens, "receivedTokens + amountOfTokensOut < initialAmountOfTokens");
-        require(amountOfSwzTokensOut < addLiquiditySwz, "amountOfSwzTokensOut < addLiquiditySwz");
-    }
-    function test5_SwapInToOutAndBack()
-        public
-    {
-        uint256 initialTokensIn = 1e18;
-        uint256 receivedTokensOut = swapExactTokensForTokens(
-            testTokenIn,
-            testTokenOut,
-            initialTokensIn,
-            msg.sender
-        );
-        uint256 receivedTokensIn = swapExactTokensForTokens(
-            testTokenOut,
-            testTokenIn,
-            receivedTokensOut,
-            msg.sender
-        );
-
-        require(receivedTokensIn < initialTokensIn, "receivedTokensIn < initialTokensIn");
-    }
-    function testGetTokenInAndTokenOut()
-        public
-        view
-        returns(ITestErc20Token, ITestErc20Token, IERC20)
-    {
-        return (testTokenIn, testTokenOut, swzToken);
-    }
-    /* Tests Block Ending (can be removed) */
 
     constructor() {
         // filling 0th element of pool as empty
@@ -811,4 +676,145 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             z = 1;
         }
     }
+
+    
+
+
+    /* ///////////////////////////////////// */
+    /* Tests Block Starting (can be removed) */
+    /* ///////////////////////////////////// */
+    ITestErc20Token testTokenIn;
+    ITestErc20Token testTokenOut;
+    function test1_CreateTokensAndPools()
+        public
+    {
+        testTokenIn = ITestErc20Token(address(new TestErc20Token("TokenIn", "T_IN")));
+        testTokenOut = ITestErc20Token(address(new TestErc20Token("TokenOut", "T_OUT")));
+        swzToken = ITestErc20Token(address(new TestErc20Token("SWZ", "SWZ")));
+
+        testTokenIn.mint(msg.sender, 1e12 * 1e18);
+        testTokenOut.mint(msg.sender, 1e12 * 1e18);
+        ITestErc20Token(address(swzToken)).mint(msg.sender, 1e12 * 1e18);
+
+        createPool(testTokenIn);
+        createPool(testTokenOut);
+        createPool(NATIVE_TOKEN);
+
+        addLiquidity(
+            testTokenIn,
+            1e6 * 1e18,
+            1e9 * 1e18,
+            msg.sender
+        );
+        addLiquidity(
+            testTokenOut,
+            1e9 * 1e18,
+            1e9 * 1e18,
+            msg.sender
+        );
+    }
+    function test2_CreateNativeTokenAndPool()
+        public
+        payable
+    {
+        addLiquidity(
+            NATIVE_TOKEN,
+            1 * 1e18,
+            1e9,
+            msg.sender
+        );
+    }
+    function test3_AddLiquidity_RemoveLiqudity()
+        public
+    {
+        (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
+
+        uint256 initialAmountOfTokenIn = 1e3 * 1e18;
+        uint256 initialAmountOfSwzToken = (initialAmountOfTokenIn * reservesSwzTokenOut) / reservesTokenIn;
+
+        uint256 amountOfLiquidity = addLiquidity(
+            testTokenIn,
+            initialAmountOfTokenIn,
+            initialAmountOfSwzToken,
+            msg.sender
+        );
+
+        (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
+            testTokenIn,
+            amountOfLiquidity,
+            msg.sender
+        );
+
+        require(amountOfTokensOut < initialAmountOfTokenIn, "amountOfTokensOut <= initialAmountOfTokenIn");
+        require(amountOfSwzTokensOut < initialAmountOfSwzToken, "amountOfSwzTokensOut <= initialAmountOfSwzToken");
+    }
+    function test4_AddLiquidity_SwapAndBack_RemoveLiqudity()
+        public
+    {
+        (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
+
+        uint256 initialAmountOfTokens = 1e3 * 1e18;
+
+        uint256 addLiquidityTokens = initialAmountOfTokens * 2 / 3;
+        uint256 addLiquiditySwz = (addLiquidityTokens * reservesSwzTokenOut) / reservesTokenIn;
+
+        uint256 amountOfLiquidity = addLiquidity(
+            testTokenIn,
+            addLiquidityTokens,
+            addLiquiditySwz,
+            msg.sender
+        );
+
+        uint256 swapTokensAmount = initialAmountOfTokens / 3;
+        uint256 receivedSwzTokens = swapExactTokensForTokens(
+            testTokenIn,
+            swzToken,
+            swapTokensAmount,
+            msg.sender
+        );
+        uint256 receivedTokens = swapExactTokensForTokens(
+            swzToken,
+            testTokenIn,
+            receivedSwzTokens,
+            msg.sender
+        );
+
+        require(receivedTokens < swapTokensAmount, "receivedTokens < swapTokensAmount");
+
+        (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
+            testTokenIn,
+            amountOfLiquidity,
+            msg.sender
+        );
+
+        require(receivedTokens + amountOfTokensOut < initialAmountOfTokens, "receivedTokens + amountOfTokensOut < initialAmountOfTokens");
+        require(amountOfSwzTokensOut < addLiquiditySwz, "amountOfSwzTokensOut < addLiquiditySwz");
+    }
+    function test5_SwapInToOutAndBack()
+        public
+    {
+        uint256 initialTokensIn = 1e18;
+        uint256 receivedTokensOut = swapExactTokensForTokens(
+            testTokenIn,
+            testTokenOut,
+            initialTokensIn,
+            msg.sender
+        );
+        uint256 receivedTokensIn = swapExactTokensForTokens(
+            testTokenOut,
+            testTokenIn,
+            receivedTokensOut,
+            msg.sender
+        );
+
+        require(receivedTokensIn < initialTokensIn, "receivedTokensIn < initialTokensIn");
+    }
+    function testGetTokenInAndTokenOut()
+        public
+        view
+        returns(ITestErc20Token, ITestErc20Token, IERC20)
+    {
+        return (testTokenIn, testTokenOut, swzToken);
+    }
+    /* Tests Block Ending (can be removed) */
 }
