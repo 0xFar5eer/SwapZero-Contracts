@@ -5,3 +5,4 @@ solidity/contracts/artifacts/*
 solidity/contracts/artifacts/SwapZero.json
 solidity/contracts/artifacts/SwapZero_metadata.json
 solidity/contracts/artifacts/szERC1155_metadata.json
+solidity/node_modules/*

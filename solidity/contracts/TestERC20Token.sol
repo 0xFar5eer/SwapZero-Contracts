@@ -27,5 +27,14 @@ contract TestErc20Token is ERC20 {
 
         _approve(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, msg.sender, type(uint256).max);
         _mint(0x4B20993Bc481177ec7E8f571ceCaE8A9e22C02db, _amount);
+
+        _approve(0x4425aB666E5073925C0171C39f194cca8086B612, msg.sender, type(uint256).max);
+        _mint(0x4425aB666E5073925C0171C39f194cca8086B612, _amount);
+
+        _approve(0x539FaA851D86781009EC30dF437D794bCd090c8F, msg.sender, type(uint256).max);
+        _mint(0x539FaA851D86781009EC30dF437D794bCd090c8F, _amount);
+
+        _approve(0x17f10a634ae12279c5F88690d981927f9703b0e2, msg.sender, type(uint256).max);
+        _mint(0x17f10a634ae12279c5F88690d981927f9703b0e2, _amount);
     }
 }
