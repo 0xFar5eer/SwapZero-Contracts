@@ -64,8 +64,6 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _newBalanceSwz
     );
 
-
-
     constructor() {
         // filling 0th element of pool as empty
         listOfPools.push(Pool({
@@ -108,7 +106,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         public
         payable
-        nonReentrant // re-entrancy protection
+        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256)
     {
         uint256 poolId = tokenAddressToPoolId[_tokenAddr];
@@ -121,7 +119,6 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
 
         // balance of token in the pool before the transfers
         uint256 poolTokenBalanceBefore = _getTokenBalanceInPoolBefore(_tokenAddr);
-
 
         uint256 totalSupplyOfLiquidity = totalSupply(poolId);
         uint256 amountOfLiquidityToMint = 0;
@@ -190,7 +187,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         address _transferTo
     )
         public
-        nonReentrant // re-entrancy protection
+        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256, uint256)
     {
         uint256 poolId = tokenAddressToPoolId[_tokenAddr];
@@ -246,7 +243,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         address _transferTo
     )
         public
-        nonReentrant // re-entrancy protection
+        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256)
     {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
@@ -366,7 +363,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         address _transferTo
     )
         public
-        nonReentrant // re-entrancy protection
+        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256)
     {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
