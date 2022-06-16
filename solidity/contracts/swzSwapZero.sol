@@ -64,6 +64,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _newBalanceSwz
     );
 
+
+    /* Tests Block Starting (can be removed) */
     ITestErc20Token testTokenIn;
     ITestErc20Token testTokenOut;
     function test1_CreateTokensAndPools()
@@ -197,6 +199,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     {
         return (testTokenIn, testTokenOut, swzToken);
     }
+    /* Tests Block Ending (can be removed) */
 
     constructor() {
         // filling 0th element of pool as empty
