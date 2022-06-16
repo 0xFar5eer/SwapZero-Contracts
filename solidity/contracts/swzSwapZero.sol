@@ -238,6 +238,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         return (amountTokensOut, amountSwzTokensOut);
     }
 
+    // TODO: add slippage minAmountTokensOut
     function swapExactTokensForTokens(
         IERC20 _tokenIn,
         IERC20 _tokenOut,
@@ -357,7 +358,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         return amountTokensOut;
     }
 
-
+    // TODO: add slippage maxAmountTokensIn
     function swapTokensForExactTokens(
         IERC20 _tokenIn,
         IERC20 _tokenOut,
@@ -555,9 +556,14 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         // native token
         // don't need to do anything
         // because native tokens already transferred to contract
+        // just need to make sure that amount tokens covers the transfer
+        // the rest is refunded back to caller
         require(_tokenAmount <= msg.value, "User must provide correct amount of native tokens");
 
-        // refunding left dust (important for swapTokensForExactTokens function)
+        // refunding left dust 
+        // which is important for swapTokensForExactTokens function
+        // where we specify msg.value > _tokenAmount
+        // it is actually slippage check
         if (_tokenAmount < msg.value) {
             payable(msg.sender).transfer(msg.value - _tokenAmount);
         }
