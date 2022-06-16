@@ -1,15 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
-pragma solidity ^0.8.14;
+pragma solidity ^0.8.15;
 
 import "./swzERC1155.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/token/ERC20/IERC20.sol";
 import "./openzeppelin-contracts-4.6.0/contracts/security/ReentrancyGuard.sol";
 
+import "./TestErc20Token.sol";
+
 contract SwapZero is swzERC1155, ReentrancyGuard {
 
-    address constant DEAD_ADDRESS = address(0xDEAD);
+    address constant DEAD_ADDRESS = address(0xDEAD); // here can be well known null address, nobody has access to it
     uint256 constant MINIMUM_LIQUIDITY = 1_000;
 
+    // 0x0000000000000000000000000000000000000000 1000000000000000000
     IERC20 constant NATIVE_TOKEN = IERC20(address(0)); // we use null address for native tokens
 
     IERC20 swzToken;
@@ -61,12 +64,39 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _newBalanceSwz
     );
 
+    ITestErc20Token testTokenIn;
+    ITestErc20Token testTokenOut;
+    function testCreateTokensAndPools()
+        public
+    {
+        testTokenIn = ITestErc20Token(address(new TestErc20Token("TokenIn", "T_IN")));
+        testTokenOut = ITestErc20Token(address(new TestErc20Token("TokenOut", "T_OUT")));
+        swzToken = ITestErc20Token(address(new TestErc20Token("SWZ", "SWZ")));
+
+        testTokenIn.mint(msg.sender, 1e9 * 1e18);
+        testTokenOut.mint(msg.sender, 1e9 * 1e18);
+        ITestErc20Token(address(swzToken)).mint(msg.sender, 1e9 * 1e18);
+
+        createPool(testTokenIn);
+        createPool(testTokenOut);
+        createPool(NATIVE_TOKEN);
+    }
+    function testGetTokenInAndTokenOut()
+        public
+        view
+        returns(ITestErc20Token, ITestErc20Token, IERC20)
+    {
+        return (testTokenIn, testTokenOut, swzToken);
+    }
+
     constructor() {
         // filling 0th element of pool as empty
         listOfPools.push(Pool({
             tokenInPool: IERC20(NATIVE_TOKEN),
             swzTokenBalance: 0
         }));
+
+        testCreateTokensAndPools();
     }
 
     function createPool(IERC20 _tokenAddr)
@@ -104,6 +134,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         public
         payable
         nonReentrant // re-entrancy protection
+        returns(uint256)
     {
         uint256 poolId = tokenAddressToPoolId[_tokenAddr];
         if (poolId == 0) {
@@ -119,13 +150,14 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         // updating pool balance in storage
         pool.swzTokenBalance += _amountSwzTokensIn;
 
-        uint256 totalSupplyOfLiquidity = totalSupply(poolId);        
+        uint256 totalSupplyOfLiquidity = totalSupply(poolId);
         uint256 amountOfLiquidityToMint = 0;
 
         if (totalSupplyOfLiquidity == 0) {
             // minting 1000 lp tokens to null address as per uniswap v2 whitepaper
             // refer to 3.4 Initialization of liquidity token supply https://uniswap.org/whitepaper.pdf
             // minting ERC1155 token for dead address
+            // refer to https://github.com/Uniswap/v2-core/blob/8b82b04a0b9e696c0e83f8b2f00e5d7be6888c79/contracts/UniswapV2Pair.sol#L119-L124
             _mint(
                 DEAD_ADDRESS,
                 poolId,
@@ -133,7 +165,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 ""
             );
 
-            // refer to 3.4 Initialization of liquidity token supply https://uniswap.org/whitepaper.pdf
+            // refer to https://github.com/Uniswap/v2-core/blob/8b82b04a0b9e696c0e83f8b2f00e5d7be6888c79/contracts/UniswapV2Pair.sol#L119-L124            
             amountOfLiquidityToMint = _sqrt(_amountTokensIn * _amountSwzTokensIn) - MINIMUM_LIQUIDITY;
         } else {
             // it is Math.min(x1, x2)
@@ -172,6 +204,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             poolTokenBalanceBefore + _amountTokensIn,
             pool.swzTokenBalance
         );
+
+        return amountOfLiquidityToMint;
     }
 
     function removeLiquidity(
