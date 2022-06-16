@@ -238,8 +238,6 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         return (amountTokensOut, amountSwzTokensOut);
     }
 
-    // TODO: swapTokensForExactTokens
-
     function swapExactTokensForTokens(
         IERC20 _tokenIn,
         IERC20 _tokenOut,
@@ -311,18 +309,25 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             return amountSwzTokensOut;
         }
 
-        // _tokenIn != swzToken && _tokenOut != swzToken
+        // if (_tokenIn != swzToken && _tokenOut != swzToken) clause
         // swap [TokenIn --> SWZ --> TokenOut], TokenIn != TokenOut
+
+        // getting amountSwzTokensOut from [TokenIn --> SWZ] swap
         (reservesIn, reservesOut) = getPoolBalances(_tokenIn);
-        
-        // calculating amount of swz tokens out from tokenIn pool
-        // which will be transferred to tokenOut pool
         amountSwzTokensOut = _getOutput(
             reservesIn,
             reservesOut,
             _amountTokensIn
+        );        
+
+        // getting amountTokensOut from [SWZ --> TokenOut] swap
+        (reservesOut, reservesIn) = getPoolBalances(_tokenOut);
+        amountTokensOut = _getOutput(
+            reservesIn,
+            reservesOut,
+            amountSwzTokensOut
         );
-        
+            
         // swap [TokenIn --> SWZ]
         _swap(
             _tokenIn,               // _tokenAddr
@@ -333,14 +338,6 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             amountSwzTokensOut     // _amountSwzTokensOut
         );
 
-        (reservesOut, reservesIn) = getPoolBalances(_tokenOut);
-
-        amountTokensOut = _getOutput(
-            reservesIn,
-            reservesOut,
-            amountSwzTokensOut
-        );
-            
         // swap [SWZ --> TokenOut]
         _swap(
             _tokenOut,              // _tokenAddr
@@ -358,6 +355,126 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         _safeTokenTransferToUser(_tokenOut, _transferTo, amountTokensOut);
 
         return amountTokensOut;
+    }
+
+
+    function swapTokensForExactTokens(
+        IERC20 _tokenIn,
+        IERC20 _tokenOut,
+        uint256 _amountTokensOut,
+        address _transferTo
+    )
+        public
+        nonReentrant // re-entrancy protection
+        returns(uint256)
+    {
+        require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
+
+        uint256 reservesIn;
+        uint256 reservesOut;
+        uint256 amountTokensIn;
+
+        // swap [SWZ --> TokenOut]
+        uint256 amountSwzTokensIn = 0;
+        if (_tokenIn == swzToken) {
+            (reservesOut, reservesIn) = getPoolBalances(_tokenOut);
+
+            amountSwzTokensIn = _getInput(
+                reservesIn,
+                reservesOut,
+                _amountTokensOut
+            );
+            
+            _swap(
+                _tokenOut,              // _tokenAddr
+                reservesOut,            // _tokenBalanceBefore
+                0,                      // _amountTokensIn
+                amountSwzTokensIn,      // _amountSwzTokensIn
+                _amountTokensOut,       // _amountTokensOut
+                0                       // _amountSwzTokensOut
+            );
+
+            // transferring SWZ tokens from user to contract
+            swzToken.transferFrom(msg.sender, address(this), amountSwzTokensIn);
+
+            // transferring tokens to user
+            _safeTokenTransferToUser(_tokenOut, _transferTo, _amountTokensOut);
+            return amountSwzTokensIn;
+        }
+
+        // swap [TokenIn --> SWZ]
+        if (_tokenOut == swzToken) {
+            (reservesIn, reservesOut) = getPoolBalances(_tokenIn);
+
+            amountTokensIn = _getInput(
+                reservesIn,
+                reservesOut,
+                _amountTokensOut
+            );
+            
+            _swap(
+                _tokenIn,               // _tokenAddr
+                reservesIn,             // _tokenBalanceBefore
+                amountTokensIn,         // _amountTokensIn
+                0,                      // _amountSwzTokensIn
+                0,                      // _amountTokensOut
+                _amountTokensOut        // _amountSwzTokensOut
+            );
+
+            // transferring tokens from user to contract
+            _safeTokenTransferFromMsgSender(_tokenIn, amountTokensIn);
+
+            // transferring SWZ tokens to user
+            swzToken.transfer(_transferTo, _amountTokensOut);
+            return amountTokensIn;
+        }
+
+        // if (_tokenIn != swzToken && _tokenOut != swzToken) clause
+        // swap [TokenIn --> SWZ --> TokenOut], TokenIn != TokenOut
+
+        // getting amountSwzTokensIn from [SWZ --> TokenOut] swap
+        (reservesOut, reservesIn) = getPoolBalances(_tokenOut);
+        amountSwzTokensIn = _getInput(
+            reservesIn,
+            reservesOut,
+            _amountTokensOut
+        );
+
+        // getting amountTokensIn from [TokenIn --> SWZ] swap
+        (reservesIn, reservesOut) = getPoolBalances(_tokenIn);
+        amountTokensIn = _getInput(
+            reservesIn,
+            reservesOut,
+            amountSwzTokensIn
+        );
+        
+        // swap [TokenIn --> SWZ]
+        _swap(
+            _tokenIn,               // _tokenAddr
+            reservesIn,             // _tokenBalanceBefore
+            amountTokensIn,         // _amountTokensIn
+            0,                      // _amountSwzTokensIn
+            0,                      // _amountTokensOut
+            amountSwzTokensIn       // _amountSwzTokensOut
+        );        
+            
+        // swap [SWZ --> TokenOut]
+        _swap(
+            _tokenOut,              // _tokenAddr
+            reservesOut,            // _tokenBalanceBefore
+            0,                      // _amountTokensIn
+            amountSwzTokensIn,      // _amountSwzTokensIn
+            _amountTokensOut,       // _amountTokensOut
+            0                       // _amountSwzTokensOut
+        );
+
+        // transferring tokens from user to contract
+        _safeTokenTransferFromMsgSender(_tokenIn, amountTokensIn);
+
+        // transferring tokens to user
+        _safeTokenTransferToUser(_tokenOut, _transferTo, _amountTokensOut);
+
+        return amountTokensIn;
     }
 
     // core swap function
@@ -438,7 +555,12 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         // native token
         // don't need to do anything
         // because native tokens already transferred to contract
-        require(_tokenAmount == msg.value, "User must provide correct amount of native tokens");
+        require(_tokenAmount <= msg.value, "User must provide correct amount of native tokens");
+
+        // refunding left dust (important for swapTokensForExactTokens function)
+        if (_tokenAmount < msg.value) {
+            payable(msg.sender).transfer(msg.value - _tokenAmount);
+        }
     }
 
     function _safeTokenTransferToUser(
@@ -623,7 +745,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _amountIn
     )
         private
-        view
+        pure
         returns (uint256)
     {
         // refer to https://github.com/Uniswap/v2-periphery/blob/2efa12e0f2d808d9b49737927f0e416fafa5af68/contracts/libraries/UniswapV2Library.sol#L43-L50
@@ -638,8 +760,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 _reservesOut,
         uint256 _amountOut
     )
-        internal
-        view
+        private
+        pure
         returns (uint256)
     {
         // refer to https://github.com/Uniswap/v2-periphery/blob/2efa12e0f2d808d9b49737927f0e416fafa5af68/contracts/libraries/UniswapV2Library.sol#L53-L59
