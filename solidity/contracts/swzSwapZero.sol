@@ -66,7 +66,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
 
     ITestErc20Token testTokenIn;
     ITestErc20Token testTokenOut;
-    function test1CreateTokensAndPools()
+    function test1_CreateTokensAndPools()
         public
     {
         testTokenIn = ITestErc20Token(address(new TestErc20Token("TokenIn", "T_IN")));
@@ -94,7 +94,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             msg.sender
         );
     }
-    function test2CreateNativeTokenAndPool()
+    function test2_CreateNativeTokenAndPool()
         public
         payable
     {
@@ -105,7 +105,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             msg.sender
         );
     }
-    function test3AddLiquidity_RemoveLiqudity()
+    function test3_AddLiquidity_RemoveLiqudity()
         public
     {
         (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
@@ -129,7 +129,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         require(amountOfTokensOut < initialAmountOfTokenIn, "amountOfTokensOut <= initialAmountOfTokenIn");
         require(amountOfSwzTokensOut < initialAmountOfSwzToken, "amountOfSwzTokensOut <= initialAmountOfSwzToken");
     }
-    function test4AddLiquidity_SwapAndBack_RemoveLiqudity()
+    function test4_AddLiquidity_SwapAndBack_RemoveLiqudity()
         public
     {
         (uint256 reservesTokenIn, uint256 reservesSwzTokenOut) = getPoolBalances(testTokenIn);
@@ -170,6 +170,25 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
 
         require(receivedTokens + amountOfTokensOut < initialAmountOfTokens, "receivedTokens + amountOfTokensOut < initialAmountOfTokens");
         require(amountOfSwzTokensOut < addLiquiditySwz, "amountOfSwzTokensOut < addLiquiditySwz");
+    }
+    function test5_SwapInToOutAndBack()
+        public
+    {
+        uint256 initialTokensIn = 1e18;
+        uint256 receivedTokensOut = swapExactTokensForTokens(
+            testTokenIn,
+            testTokenOut,
+            initialTokensIn,
+            msg.sender
+        );
+        uint256 receivedTokensIn = swapExactTokensForTokens(
+            testTokenOut,
+            testTokenIn,
+            receivedTokensOut,
+            msg.sender
+        );
+
+        require(receivedTokensIn < initialTokensIn, "receivedTokensIn < initialTokensIn");
     }
     function testGetTokenInAndTokenOut()
         public
