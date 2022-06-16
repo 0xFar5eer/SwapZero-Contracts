@@ -221,7 +221,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         // transferring SWZ tokens to user
         swzToken.transfer(_transferTo, amountSwzTokensOut);
         
-        emit LiquidityAdded(
+        emit LiquidityRemoved(
             _tokenAddr,
             amountTokensOut,
             amountSwzTokensOut,
