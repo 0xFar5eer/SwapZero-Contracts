@@ -20,9 +20,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
 
     mapping(IERC20 => uint256) tokenAddressToPoolId;
 
-    uint256 TRADE_FEE_NOMINATOR = 25; // 0.25% = 25/10,000
-    uint256 TRADE_FEE_DENOMINATOR = 10_000;
-    uint256 TRADE_FEE_DENOMINATOR_MINUS_NOMINATOR = TRADE_FEE_DENOMINATOR - TRADE_FEE_NOMINATOR;
+    uint256 constant TRADE_FEE_NOMINATOR = 25; // 0.25% = 25/10,000
+    uint256 constant TRADE_FEE_DENOMINATOR = 10_000;
+    uint256 constant TRADE_FEE_DENOMINATOR_MINUS_NOMINATOR = TRADE_FEE_DENOMINATOR - TRADE_FEE_NOMINATOR;
 
     struct Pool {
         IERC20 tokenInPool;
