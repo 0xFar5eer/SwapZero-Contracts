@@ -149,6 +149,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 _amountTokensIn = optimalAmountTokensIn;
             } else {
                 uint256 optimalAmountSwzTokensIn = (_amountTokensIn * pool.swzTokenBalance) / poolTokenBalanceBefore;
+                
                 require(optimalAmountSwzTokensIn <= _amountSwzTokensIn, "Insufficient _amountTokensIn & _amountSwzTokensIn provided");
                 require(optimalAmountSwzTokensIn >= _minAmountSwzTokensIn, "Insufficient _amountSwzTokensIn provided");
                 _amountSwzTokensIn = optimalAmountSwzTokensIn;
@@ -396,7 +397,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
 
         // making sure provided value is correct
-        require(tokenIn == NATIVE_TOKEN && _maxAmountTokensIn == msg.value, "Incorrect _maxAmountTokensIn for native token provided");
+        require(_tokenIn == NATIVE_TOKEN && _maxAmountTokensIn == msg.value, "Incorrect _maxAmountTokensIn for native token provided");
 
         uint256 reservesIn;
         uint256 reservesOut;
@@ -868,12 +869,16 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             testTokenIn,
             1e6 * 1e18,
             1e9 * 1e18,
+            0,
+            0,
             msg.sender
         );
         addLiquidity(
             testTokenOut,
             1e9 * 1e18,
             1e9 * 1e18,
+            0,
+            0,
             msg.sender
         );
     }
@@ -885,6 +890,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             NATIVE_TOKEN,
             1 * 1e18,
             1e9,
+            0,
+            0,
             msg.sender
         );
     }
@@ -900,6 +907,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             testTokenIn,
             initialAmountOfTokenIn,
             initialAmountOfSwzToken,
+            0,
+            0,
             msg.sender
         );
 
@@ -926,6 +935,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             testTokenIn,
             addLiquidityTokens,
             addLiquiditySwz,
+            0,
+            0,
             msg.sender
         );
 
@@ -934,12 +945,14 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             testTokenIn,
             swzToken,
             swapTokensAmount,
+            0,
             msg.sender
         );
         uint256 receivedTokens = swapExactTokensForTokens(
             swzToken,
             testTokenIn,
             receivedSwzTokens,
+            0,
             msg.sender
         );
 
@@ -962,12 +975,14 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             testTokenIn,
             testTokenOut,
             initialTokensIn,
+            0,
             msg.sender
         );
         uint256 receivedTokensIn = swapExactTokensForTokens(
             testTokenOut,
             testTokenIn,
             receivedTokensOut,
+            0,
             msg.sender
         );
 
