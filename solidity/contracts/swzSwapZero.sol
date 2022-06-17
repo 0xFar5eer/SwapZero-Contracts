@@ -102,6 +102,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         IERC20 _tokenAddr,
         uint256 _amountTokensIn,
         uint256 _amountSwzTokensIn,
+        uint256 _minAmountTokensIn,
+        uint256 _minAmountSwzTokensIn,
         address _transferTo
     )
         public
@@ -121,9 +123,10 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 poolTokenBalanceBefore = _getTokenBalanceInPoolBefore(_tokenAddr);
 
         uint256 totalSupplyOfLiquidity = totalSupply(poolId);
-        uint256 amountOfLiquidityToMint = 0;
 
+        uint256 amountOfLiquidityToMint = 0;
         if (totalSupplyOfLiquidity == 0) {
+            // first time adding liquidity to this pair
             // minting 1000 lp tokens to null address as per uniswap v2 whitepaper
             // refer to 3.4 Initialization of liquidity token supply https://uniswap.org/whitepaper.pdf
             // minting ERC1155 token for dead address
@@ -138,6 +141,19 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             // refer to https://github.com/Uniswap/v2-core/blob/8b82b04a0b9e696c0e83f8b2f00e5d7be6888c79/contracts/UniswapV2Pair.sol#L119-L124            
             amountOfLiquidityToMint = _sqrt(_amountTokensIn * _amountSwzTokensIn) - MINIMUM_LIQUIDITY;
         } else {
+            // not first time adding liquidity to this pair
+            // refer to https://github.com/Uniswap/v2-periphery/blob/2efa12e0f2d808d9b49737927f0e416fafa5af68/contracts/UniswapV2Router01.sol#L46-L55
+            uint256 optimalAmountTokensIn = (_amountSwzTokensIn * poolTokenBalanceBefore) / pool.swzTokenBalance;
+            if (optimalAmountTokensIn <= _amountTokensIn) {
+                require(optimalAmountTokensIn >= _minAmountTokensIn, "Insufficient _amountTokensIn provided");
+                _amountTokensIn = optimalAmountTokensIn;
+            } else {
+                uint256 optimalAmountSwzTokensIn = (_amountTokensIn * pool.swzTokenBalance) / poolTokenBalanceBefore;
+                require(optimalAmountSwzTokensIn <= _amountSwzTokensIn, "Insufficient _amountTokensIn & _amountSwzTokensIn provided");
+                require(optimalAmountSwzTokensIn >= _minAmountSwzTokensIn, "Insufficient _amountSwzTokensIn provided");
+                _amountSwzTokensIn = optimalAmountSwzTokensIn;
+            }
+
             // it is Math.min(x1, x2)
             amountOfLiquidityToMint = _min(
                 (_amountTokensIn * totalSupplyOfLiquidity) / poolTokenBalanceBefore,
@@ -235,14 +251,15 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         return (amountTokensOut, amountSwzTokensOut);
     }
 
-    // TODO: add slippage minAmountTokensOut
     function swapExactTokensForTokens(
         IERC20 _tokenIn,
         IERC20 _tokenOut,
         uint256 _amountTokensIn,
+        uint256 _minAmountTokensOut,
         address _transferTo
     )
         public
+        payable
         nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256)
     {
@@ -261,6 +278,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 reservesOut,
                 _amountTokensIn
             );
+
+            // checking slippage
+            require(amountTokensOut >= _minAmountTokensOut, "Amount of tokens out is less than minimum required");
             
             _swap(
                 _tokenOut,              // _tokenAddr
@@ -289,6 +309,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 reservesOut,
                 _amountTokensIn
             );
+
+            // checking slippage
+            require(amountSwzTokensOut >= _minAmountTokensOut, "Amount of tokens out is less than minimum required");
             
             _swap(
                 _tokenIn,               // _tokenAddr
@@ -325,6 +348,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             reservesOut,
             amountSwzTokensOut
         );
+
+        // checking slippage
+        require(amountTokensOut >= _minAmountTokensOut, "Amount of tokens out is less than minimum required");
             
         // swap [TokenIn --> SWZ]
         _swap(
@@ -355,18 +381,22 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         return amountTokensOut;
     }
 
-    // TODO: add slippage maxAmountTokensIn
     function swapTokensForExactTokens(
         IERC20 _tokenIn,
         IERC20 _tokenOut,
+        uint256 _maxAmountTokensIn,
         uint256 _amountTokensOut,
         address _transferTo
     )
         public
+        payable
         nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
         returns(uint256)
     {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
+
+        // making sure provided value is correct
+        require(tokenIn == NATIVE_TOKEN && _maxAmountTokensIn == msg.value, "Incorrect _maxAmountTokensIn for native token provided");
 
         uint256 reservesIn;
         uint256 reservesOut;
@@ -382,7 +412,10 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 reservesOut,
                 _amountTokensOut
             );
-            
+
+            // checking slippage
+            require(amountSwzTokensIn <= _maxAmountTokensIn, "Amount of tokens in is larger than maximum required");
+
             _swap(
                 _tokenOut,              // _tokenAddr
                 reservesOut,            // _tokenBalanceBefore
@@ -409,6 +442,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
                 reservesOut,
                 _amountTokensOut
             );
+
+            // checking slippage
+            require(amountTokensIn <= _maxAmountTokensIn, "Amount of tokens in is larger than maximum required");
             
             _swap(
                 _tokenIn,               // _tokenAddr
@@ -445,6 +481,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             reservesOut,
             amountSwzTokensIn
         );
+
+        // checking slippage
+        require(amountTokensIn <= _maxAmountTokensIn, "Amount of tokens in is larger than maximum required");
         
         // swap [TokenIn --> SWZ]
         _swap(
