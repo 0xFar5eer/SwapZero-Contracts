@@ -108,7 +108,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         public
         payable
-        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
+        nonReentrant // re-entrancy protection
         returns(uint256)
     {
         uint256 poolId = tokenAddressToPoolId[_tokenAddr];
@@ -204,7 +204,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         address _transferTo
     )
         public
-        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
+        nonReentrant // re-entrancy protection
         returns(uint256, uint256)
     {
         uint256 poolId = tokenAddressToPoolId[_tokenAddr];
@@ -261,7 +261,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         public
         payable
-        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
+        nonReentrant // re-entrancy protection
         returns(uint256)
     {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
@@ -360,7 +360,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
             _amountTokensIn,        // _amountTokensIn
             0,                      // _amountSwzTokensIn
             0,                      // _amountTokensOut
-            amountSwzTokensOut     // _amountSwzTokensOut
+            amountSwzTokensOut      // _amountSwzTokensOut
         );
 
         // swap [SWZ --> TokenOut]
@@ -391,7 +391,7 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     )
         public
         payable
-        nonReentrant // re-entrancy protection TODO: double check, seems re-entrancy is not applicable
+        nonReentrant // re-entrancy protection
         returns(uint256)
     {
         require(_tokenIn != _tokenOut, "Can't swap the same token to itself");
