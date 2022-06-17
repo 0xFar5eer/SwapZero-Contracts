@@ -201,6 +201,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
     function removeLiquidity(
         IERC20 _tokenAddr,
         uint256 _amountOfLiquidityToRemove,
+        uint256 _minAmountTokensOut,
+        uint256 _minAmountSwzTokensOut,
         address _transferTo
     )
         public
@@ -218,6 +220,9 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         uint256 totalSupplyOfLiquidity = totalSupply(poolId);
         uint256 amountTokensOut = (poolTokenBalanceBefore * _amountOfLiquidityToRemove) / totalSupplyOfLiquidity;
         uint256 amountSwzTokensOut = (pool.swzTokenBalance * _amountOfLiquidityToRemove) / totalSupplyOfLiquidity;
+
+        require(amountTokensOut >= _minAmountTokensOut, "AmountTokensOut is less than minimum");
+        require(amountSwzTokensOut >= _minAmountSwzTokensOut, "AmountSwzTokensOut is less than minimum");
 
         // updating pool balance in storage
         pool.swzTokenBalance -= amountSwzTokensOut;
@@ -915,6 +920,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
             testTokenIn,
             amountOfLiquidity,
+            0,
+            0,
             msg.sender
         );
 
@@ -961,6 +968,8 @@ contract SwapZero is swzERC1155, ReentrancyGuard {
         (uint256 amountOfTokensOut, uint256 amountOfSwzTokensOut) = removeLiquidity(
             testTokenIn,
             amountOfLiquidity,
+            0,
+            0,
             msg.sender
         );
 
